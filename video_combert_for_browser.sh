@@ -3,6 +3,7 @@ set -eu -o pipefail
 
 # NOTE: not change directory. thiss
 CURRENT_DIR="$(pwd)"
+SELF_DIR=`cd "$(dirname "${BASH_SOURCE[0]}")" && pwd`
 
 help() {
 cat << EOF
@@ -14,17 +15,13 @@ Usage: $0 {Command} [args...]
 EOF
 }
 
+# load support files =====
+source "$SELF_DIR/scripts/index.sh"
+
+# set envs =====
 ADD_SUFFIX="_browser"
 
-get_basename() {
-  printf '%s' "${1%.*}"
-}
-
-get_ext() {
-  printf '%s' "${1##*.}"
-}
-
-
+# functions =====
 get_output_name() {
   local _ADD_SUFFIX="${2:-_converted}"
   local name=`get_basename "$1"`
@@ -32,17 +29,9 @@ get_output_name() {
   echo "${name}${_ADD_SUFFIX}.${ext}"
 }
 
-convert_to_browser() {
-  local IN="$1"
-  local OUT="$2"
-  # only convert video stream to h264 for browser compatibility.
-  ffmpeg -i "$IN" -c:v libx264 -pix_fmt yuv420p -c:a copy "$OUT"
-}
-
 convert_file() {
   local FILE="$1"
-  local OUT
-  OUT=$(get_output_name "$FILE" "$ADD_SUFFIX")
+  local OUT=$(get_output_name "$FILE" "$ADD_SUFFIX")
   if [[ -f "$OUT" ]]; then
     echo "Output file $OUT already exists, skipping $FILE"
     return
@@ -55,7 +44,7 @@ convert_file() {
     return
   fi
   
-  convert_to_browser "$FILE" "$OUT"
+  convert_for_browser "$FILE" "$OUT"
 }
 
 # Convert files with type check
@@ -82,7 +71,7 @@ convert_current_dir() {
   convert_files "$CURRENT_DIR"
 }
 
-
+# main =====
 [ $# -gt 0 ] && { COMMAND="$1"; shift; }
 case "${COMMAND:-}" in
   current-dir)
